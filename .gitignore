@@ -3,5 +3,5 @@ node_modules
 demo
 pnpm-lock.yaml
 package-lock.json
-pdf
+public/pdf/demo.pdf
 chut.js
