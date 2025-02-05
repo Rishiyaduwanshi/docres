@@ -1,0 +1,23 @@
+{
+  "name": "doc-res",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon --env-file=.env server.js",
+    "con": "nodemon --env-file=.env conn.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@zilliz/milvus2-sdk-node": "^2.5.5",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "natural": "^8.0.1",
+    "node-fetch": "^3.3.2",
+    "pdfreader": "^3.0.7"
+  }
+}
