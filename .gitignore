@@ -5,3 +5,6 @@ pnpm-lock.yaml
 package-lock.json
 public/pdf/demo.pdf
 chut.js
+logs
+uploads/*
+!uploads/.gitkeep
