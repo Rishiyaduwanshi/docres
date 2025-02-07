@@ -1,52 +1,65 @@
 import fetch from "node-fetch";
-import SELECTED_MODEL from "../config/llmConfig.js";
+import { SELECTED_EMBEDDING } from "../config/embeddingConfig.js";
 
 export async function generateEmbeddings(textChunks) {
-  
-  if (SELECTED_MODEL.provider === "ollama") {
-    // console.log("textChunks inside ollama-------->", textChunks)
+  if (SELECTED_EMBEDDING.provider === "ollama") {
     return await ollamaEmbeddings(textChunks);
-  } else if (SELECTED_MODEL.provider === "huggingface") {
-    // console.log("textChunks inside hugging face -------->", textChunks)
+  } else if (SELECTED_EMBEDDING.provider === "huggingface") {
     return await huggingfaceEmbeddings(textChunks);
   }
 }
 
 async function ollamaEmbeddings(textChunks) {
-    const embeddings = [];
-    for (let chunk of textChunks) {
-        try {
-            const response = await fetch("http://localhost:11434/api/embeddings", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ model: SELECTED_MODEL.model, prompt: chunk }),
-            });
-            const data = await response.json();
-            if (data && data.embedding) {
-                embeddings.push(data.embedding);
-            } else {
-                console.error("Embedding not found in response:", data);
-                embeddings.push(null);
-            }
-        } catch (error) {
-            console.error("Error fetching embeddings:", error);
-            embeddings.push(null);
-        }
-    }
-    return embeddings;
-}
+  const embeddings = [];
 
+  for (let chunk of textChunks) {
+    try {
+      const response = await fetch(SELECTED_EMBEDDING.apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: SELECTED_EMBEDDING.model, prompt: chunk }),
+      });
+
+      if (!response.ok) {
+        console.error(`❌ Ollama API Error: ${response.statusText}`);
+        embeddings.push(null);
+        continue;
+      }
+
+      const data = await response.json();
+      if (data?.embedding) {
+        embeddings.push(data.embedding);
+      } else {
+        console.error("❌ Embedding not found in response:", data);
+        embeddings.push(null);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching embeddings from Ollama:", error);
+      embeddings.push(null);
+    }
+  }
+
+  return embeddings;
+}
 
 // Hugging Face embeddings
 async function huggingfaceEmbeddings(textChunks) {
-  const response = await fetch(
-    `${SELECTED_MODEL.apiUrl}${SELECTED_MODEL.model}`,
-    {
+  try {
+    const response = await fetch(`${SELECTED_EMBEDDING.apiUrl}${SELECTED_EMBEDDING.model}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${SELECTED_MODEL.apiKey}` },
+      headers: { Authorization: `Bearer ${SELECTED_EMBEDDING.apiKey}` },
       body: JSON.stringify({ inputs: textChunks }),
+    });
+
+    if (!response.ok) {
+      console.error(`❌ Hugging Face API Error: ${response.statusText}`);
+      return [];
     }
-  );
-  const data = await response.json();
-  return data.embeddings;
+
+    const data = await response.json();
+    return data.embeddings || [];
+  } catch (error) {
+    console.error("❌ Error fetching embeddings from Hugging Face:", error);
+    return [];
+  }
 }
