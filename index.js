@@ -1,29 +1,45 @@
 import { extractTextFromPDF } from "./src/utils/pdfProcessor.js";
 import { smartChunk } from "./src/utils/chunker.js";
 import { generateEmbeddings } from "./src/utils/embedder.js";
+import normalizeEmbedding from "./src/helpers/normalizeEmbedding.js";
 import { storeEmbeddings, searchEmbeddings } from "./src/utils/vectorStore.js";
+import { listFiles } from "./src/helpers/listFiles.js";
+import { AppError } from "./API/utils/appError.js";
 
-export default async function index() {
+export default async function index(username) {
   async function processPDF(pdfPath) {
     console.log("📄 Processing PDF:------------------------ ", pdfPath);
     const text = await extractTextFromPDF(pdfPath);
     const chunks = smartChunk(text);
-    // console.log("chunks----------",chunks)
     const embeddings = await generateEmbeddings(chunks);
-    // console.log("embeddings=======",embeddings)
     await storeEmbeddings(chunks, embeddings);
   }
 
-  async function retrieveAnswer(query) {
-    const queryEmbedding = await generateEmbeddings([query]);
-    // console.log("=============",queryEmbedding)
-    const results = await searchEmbeddings(queryEmbedding[0]);
-    // console.log("🔍 Retrieved Context:----------------------",results);
+  async function processMultiplePDFs(pdfPaths) {
+    for (const pdfPath of pdfPaths) {
+      await processPDF(pdfPath);
+    }
   }
+
   try {
-    await processPDF("public/pdf/demo.pdf"); // Replace with your own PDF path
+    // const PDFPaths = ["public/pdf/demo1.pdf","public/pdf/demo2.pdf", "public/pdf/demo3.pdf"];
+    const PDFPaths = await listFiles(username)
+    await processMultiplePDFs(PDFPaths); // Replace with your own PDF path
   } catch (err) {
-    console.error("unable to parse the PDF --> ", err);
+    throw new AppError("Unable to parse the file",404)
   }
-  await retrieveAnswer("What is my name?");
 }
+
+
+export async function retrieveAnswer(query, topCount) {
+  const queryEmbedding = await generateEmbeddings([query]);
+  const normalizeQueryEmbedding = await normalizeEmbedding(queryEmbedding[0])
+  const results = await searchEmbeddings(normalizeQueryEmbedding, topCount);
+  return results
+}
+
+
+
+
+
+
