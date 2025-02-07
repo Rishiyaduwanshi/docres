@@ -1,5 +1,5 @@
 import { client } from "../config/dbConfig.js";
-import { DataType, MetricType } from "@zilliz/milvus2-sdk-node";
+import { MetricType } from "@zilliz/milvus2-sdk-node";
 import normalizeEmbedding from "../helpers/normalizeEmbedding.js";
 
 export async function storeEmbeddings(chunks, embeddings) {
@@ -29,7 +29,7 @@ export async function storeEmbeddings(chunks, embeddings) {
       };
     });
 
-    console.log("✅ Entities to be inserted:", JSON.stringify(entities, null, 2));
+    // console.log("✅ Entities to be inserted:", JSON.stringify(entities, null, 2));
 
     // ✅ 3. Insert into Milvus
     const result = await client.insert({
@@ -44,13 +44,14 @@ export async function storeEmbeddings(chunks, embeddings) {
   }
 }
 
-export async function searchEmbeddings(queryEmbedding) {
+export async function searchEmbeddings(queryEmbedding, topCount) {
   try {
     const collectionName = process.env.COLLECTION_NAME;
     console.log(`🔍 Searching in collection: ${collectionName}`);
 
     // ✅ 1. Ensure the collection exists before searching
-    const collectionExists = await client.hasCollection({ collection_name: collectionName });
+      const collectionExists = await client.hasCollection({ collection_name: collectionName });
+    
     if (!collectionExists) {
       console.error(`❌ Collection ${collectionName} does not exist!`);
       throw new Error(`❌ Collection ${collectionName} does not exist!`);
@@ -76,7 +77,7 @@ export async function searchEmbeddings(queryEmbedding) {
     const response = await client.search({
       collection_name: collectionName,
       vectors: [normalizeQueryEmbedding], // The query vector
-      top_k: 10,  // Fetch top 10 results
+      top_k: topCount,  // Fetch top 10 results
       anns_field: "vector",  // The field containing vectors
       metric_type: MetricType.COSINE,  // Use Cosine
       params: { nprobe: 20 },  // Increase nprobe for deeper search
@@ -84,8 +85,6 @@ export async function searchEmbeddings(queryEmbedding) {
 
     // ✅ 6. Check if results are found and return them
     if (response.results && response.results.length > 0) {
-      console.log(`✅ Found ${response.results.length} results.`);
-      // console.log(response.results);
       return response.results; // Return the search results
     } else {
       console.log("🔍 No results found for the query.");
